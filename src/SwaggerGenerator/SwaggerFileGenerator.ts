@@ -26,6 +26,7 @@ import { BuildAxiosMethodResult } from './Result/BuildAxiosMethodResult';
 import { ImportType } from '../TypescriptFile/Payload/ImportType';
 import { SwaggerOperationResult } from './Result/SwaggerOperationResult';
 import { CacheReferenceObjectResult } from './Result/CacheReferenceObjectResult';
+import { BuildAxiosParamsPayload } from './Payload/BuildAxiosParamsPayload';
 
 export class SwaggerFileGenerator {
   private readonly _name: string;
@@ -247,7 +248,7 @@ export class SwaggerFileGenerator {
     if (servers != undefined && servers.length > 0) {
       const server = servers[0];
       const url = server.url;
-      if (url.startsWith("/")){
+      if (url.startsWith('/')) {
         return this._baseUrl + url;
       }
       return server.url;
@@ -369,20 +370,52 @@ export class SwaggerFileGenerator {
       path: `../../IManager/${payload.tag}/Payload/${payload.tag}Payload`,
       type: ImportType.NamedImport,
     });
+
+    let sourceCode = `const response = await this._instance.${payload.method}<${responseType.type}>("${payload.path}", {`;
+
+    const parameter = payload.operation.parameters;
+    if (parameter != undefined && parameter.length > 0) {
+      sourceCode += '\n\t\t\tparams:{\n';
+      const axiosParams = this.buildAxiosParams({
+        parameters: parameter,
+      });
+      for (const key in axiosParams) {
+        const value = axiosParams[key];
+        sourceCode += `\t\t\t\t${key} : ${value},\n`;
+      }
+      sourceCode += `\t\t\t}\n`;
+    }else{
+      sourceCode += `\n`;
+    }
+
+    sourceCode += `\t\t});\n` + '\t\treturn response.data;';
+
     payload.file.addMethod({
       name: `${operationId}Async`,
       returnType: `Promise<${responseType.type}>`,
       parameters: {
         payload: `${payload.tag}Payload`,
       },
-      sourceCode:
-        `const response = await this._instance.${payload.method}<${responseType.type}>("${payload.path}");\n` +
-        '\t\treturn response.data;',
+      sourceCode: sourceCode,
     });
 
     return {
       files: files,
     };
+  }
+
+  private buildAxiosParams(
+    payload: BuildAxiosParamsPayload,
+  ): Record<string, string> {
+    const reuslt: Record<string, string> = {};
+    for (const parameter of payload.parameters) {
+      if (isReferenceObject(parameter)) {
+        console.log('ReferenceObject');
+      } else {
+        reuslt[parameter.name] = `payload.${parameter.name}`;
+      }
+    }
+    return reuslt;
   }
 
   private addFiles(result: TypescriptFile[], files: TypescriptFile[]) {
