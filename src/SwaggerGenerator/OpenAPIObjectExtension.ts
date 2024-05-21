@@ -1,9 +1,7 @@
-import {
-  SchemaObjectType,
-} from "openapi3-ts/oas30";
+import { SchemaObjectType } from 'openapi3-ts/oas30';
 
 export function isSchemaObjectType(value: any): value is SchemaObjectType {
-  return typeof value === "string" && value !== null;
+  return typeof value === 'string' && value !== null;
 }
 
 export function upperCaseFirstLetter(value: string): string {
@@ -15,14 +13,17 @@ export function lowerCaseFirstLetter(value: string): string {
 }
 
 export function getOperationId(operationId: string | undefined): string {
-  const result = operationId;
+  let result = operationId;
   if (result != undefined) {
-    const methodName = result.split("_")[1];
-    if (methodName.endsWith("Async")) {
+    let methodName = result;
+    if (methodName.includes('_')) {
+      methodName = methodName.split('_')[1];
+    }
+    if (methodName.endsWith('Async')) {
       return methodName.slice(0, -5);
     } else {
       return `${methodName}`;
     }
   }
-  return "";
+  return '';
 }

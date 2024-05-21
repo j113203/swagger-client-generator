@@ -5,27 +5,27 @@ import {
   ResponseObject,
   isReferenceObject,
   isSchemaObject,
-} from "openapi3-ts/oas30";
-import TypescriptFile from "../TypescriptFile/TypescriptFile";
-import { TypescriptFileType } from "../TypescriptFile/TypescriptFileType";
-import { ParseReferenceObjectOrSchemaObjectPayload } from "./Payload/ParseReferenceObjectOrSchemaObjectPayload";
-import { ParseReferenceObjectOrSchemaObjectResult } from "./Result/ParseReferenceObjectOrSchemaObjectResult";
-import { ParseParameterObjectOrReferenceObjectPayload } from "./Payload/ParseParameterObjectOrReferenceObjectPayload";
-import { ParseParameterObjectOrReferenceObjectResult } from "./Result/ParseParameterObjectOrReferenceObjectResult";
+} from 'openapi3-ts/oas30';
+import TypescriptFile from '../TypescriptFile/TypescriptFile';
+import { TypescriptFileType } from '../TypescriptFile/TypescriptFileType';
+import { ParseReferenceObjectOrSchemaObjectPayload } from './Payload/ParseReferenceObjectOrSchemaObjectPayload';
+import { ParseReferenceObjectOrSchemaObjectResult } from './Result/ParseReferenceObjectOrSchemaObjectResult';
+import { ParseParameterObjectOrReferenceObjectPayload } from './Payload/ParseParameterObjectOrReferenceObjectPayload';
+import { ParseParameterObjectOrReferenceObjectResult } from './Result/ParseParameterObjectOrReferenceObjectResult';
 import {
   getOperationId,
   lowerCaseFirstLetter,
   upperCaseFirstLetter,
-} from "./OpenAPIObjectExtension";
-import { ParseResponseObjectOrReferenceObjectPayload } from "./Payload/ParseResponseObjectOrReferenceObjectPayload";
-import { ParseResponseObjectOrReferenceObjectResult } from "./Result/ParseResponseObjectOrReferenceObjectResult";
-import { BuildAbstractMethodPayload } from "./Payload/BuildAbstractMethodPayload";
-import { BuildAbstractMethodResult } from "./Result/BuildAbstractMethodResult";
-import { BuildAxiosMethodPayload } from "./Payload/BuildAxiosMethodPayload";
-import { BuildAxiosMethodResult } from "./Result/BuildAxiosMethodResult";
-import { ImportType } from "../TypescriptFile/Payload/ImportType";
-import { SwaggerOperationResult } from "./Result/SwaggerOperationResult";
-import { CacheReferenceObjectResult } from "./Result/CacheReferenceObjectResult";
+} from './OpenAPIObjectExtension';
+import { ParseResponseObjectOrReferenceObjectPayload } from './Payload/ParseResponseObjectOrReferenceObjectPayload';
+import { ParseResponseObjectOrReferenceObjectResult } from './Result/ParseResponseObjectOrReferenceObjectResult';
+import { BuildAbstractMethodPayload } from './Payload/BuildAbstractMethodPayload';
+import { BuildAbstractMethodResult } from './Result/BuildAbstractMethodResult';
+import { BuildAxiosMethodPayload } from './Payload/BuildAxiosMethodPayload';
+import { BuildAxiosMethodResult } from './Result/BuildAxiosMethodResult';
+import { ImportType } from '../TypescriptFile/Payload/ImportType';
+import { SwaggerOperationResult } from './Result/SwaggerOperationResult';
+import { CacheReferenceObjectResult } from './Result/CacheReferenceObjectResult';
 
 export class SwaggerFileGenerator {
   private readonly _name: string;
@@ -37,7 +37,7 @@ export class SwaggerFileGenerator {
     name: string,
     baseUrl: string,
     prefixDirectory: string,
-    openAPiObject: OpenAPIObject
+    openAPiObject: OpenAPIObject,
   ) {
     this._name = name;
     this._baseUrl = baseUrl;
@@ -56,10 +56,10 @@ export class SwaggerFileGenerator {
       for (let i = 0; i < methodKeys.length; i++) {
         const methodKey = methodKeys[i];
         switch (methodKey) {
-          case "get":
-          case "post":
-          case "put":
-          case "delete":
+          case 'get':
+          case 'post':
+          case 'put':
+          case 'delete':
             const operationObject: OperationObject | undefined =
               pathObject[methodKey];
             if (operationObject != undefined) {
@@ -94,42 +94,42 @@ export class SwaggerFileGenerator {
       .setName(`${this._name}Client`)
       .setPath(`${this._prefixDirectory}/${this._name}Client.ts`)
       .addField({
-        name: "instance",
-        type: "AxiosInstance",
+        name: '_instance',
+        type: 'AxiosInstance',
         required: true,
         privateField: true,
       })
       .addImport({
-        name: "AxiosInstance",
-        path: "axios",
+        name: 'AxiosInstance',
+        path: 'axios',
         type: ImportType.NamedImport,
       })
       .addConstructor({
         parameters: {},
         sourceCode:
-          `this.instance = axios.create({\n` +
+          `this._instance = axios.create({\n` +
           `\t\t\tbaseURL: "${this.getBaseUrl()}",\n` +
           `\t\t});`,
       })
       .addImport({
-        name: "axios",
-        path: "axios",
+        name: 'axios',
+        path: 'axios',
         type: ImportType.DefaultImport,
       })
       .addMethod({
-        name: "axios",
-        returnType: "AxiosInstance",
-        sourceCode: "return this.instance;",
+        name: 'axios',
+        returnType: 'AxiosInstance',
+        sourceCode: 'return this._instance;',
         getter: true,
         parameters: {},
       });
 
     const imanagerIndexFile = new TypescriptFile(
-      TypescriptFileType.Index
+      TypescriptFileType.Index,
     ).setPath(`${this._prefixDirectory}/IManager/index.ts`);
 
     const managerIndexFile = new TypescriptFile(
-      TypescriptFileType.Index
+      TypescriptFileType.Index,
     ).setPath(`${this._prefixDirectory}/Manager/index.ts`);
 
     for (const tag of Object.keys(tags)) {
@@ -150,21 +150,21 @@ export class SwaggerFileGenerator {
           type: ImportType.NamedImport,
         })
         .addField({
-          name: "instance",
-          type: "AxiosInstance",
+          name: '_instance',
+          type: 'AxiosInstance',
           required: true,
           privateField: true,
         })
         .addImport({
-          name: "AxiosInstance",
-          path: "axios",
+          name: 'AxiosInstance',
+          path: 'axios',
           type: ImportType.NamedImport,
         })
         .addConstructor({
           parameters: {
-            instance: "AxiosInstance",
+            instance: 'AxiosInstance',
           },
-          sourceCode: "this.instance = instance",
+          sourceCode: 'this._instance = instance',
         })
         .setName(`${tag}Manager`);
       managerIndexFile.addExport({
@@ -196,17 +196,17 @@ export class SwaggerFileGenerator {
         name: `${lowerCaseFirstLetter(tag)}`,
         returnType: `I${tag}Manager`,
         parameters: {},
-        sourceCode: `return new ${tag}Manager(this.instance);`,
+        sourceCode: `return new ${tag}Manager(this._instance);`,
         getter: true,
       });
       apiFile.addImport({
         name: `I${tag}Manager`,
-        path: "./IManager",
+        path: './IManager',
         type: ImportType.NamedImport,
       });
       apiFile.addImport({
         name: `${tag}Manager`,
-        path: "./Manager",
+        path: './Manager',
         type: ImportType.NamedImport,
       });
 
@@ -220,13 +220,13 @@ export class SwaggerFileGenerator {
     const globalIndexFile = new TypescriptFile(TypescriptFileType.Index)
       .setPath(`${this._prefixDirectory}/index.ts`)
       .addExport({
-        name: "*",
-        path: "./IManager",
+        name: '*',
+        path: './IManager',
         type: ImportType.DefaultImport,
       })
       .addExport({
-        name: "*",
-        path: "./Manager",
+        name: '*',
+        path: './Manager',
         type: ImportType.DefaultImport,
       })
       .addExport({
@@ -234,7 +234,7 @@ export class SwaggerFileGenerator {
         path: `./${this._name}Client`,
         type: ImportType.NamedImport,
       });
-      
+
     this.addFile(files, globalIndexFile);
 
     this.addFile(files, apiFile);
@@ -246,13 +246,17 @@ export class SwaggerFileGenerator {
     const servers = this._openAPiObject.servers;
     if (servers != undefined && servers.length > 0) {
       const server = servers[0];
+      const url = server.url;
+      if (url.startsWith("/")){
+        return this._baseUrl + url;
+      }
       return server.url;
     }
     return this._baseUrl;
   }
 
   private async buildAbstractMethodAsync(
-    payload: BuildAbstractMethodPayload
+    payload: BuildAbstractMethodPayload,
   ): Promise<BuildAbstractMethodResult> {
     const files: TypescriptFile[] = [];
 
@@ -260,7 +264,7 @@ export class SwaggerFileGenerator {
     const payloadFile = new TypescriptFile(TypescriptFileType.Interface);
     payloadFile.setName(`${payload.tag}Payload`);
     payloadFile.setPath(
-      `${this._prefixDirectory}/IManager/${payload.tag}/Payload/${payload.tag}Payload.ts`
+      `${this._prefixDirectory}/IManager/${payload.tag}/Payload/${payload.tag}Payload.ts`,
     );
     if (parameters != undefined) {
       for (const parameter of parameters) {
@@ -279,7 +283,7 @@ export class SwaggerFileGenerator {
           propertyFile.setPath(
             `${this._prefixDirectory}/IManager/${
               payload.tag
-            }/Payload/${propertyFile.getName()}.ts`
+            }/Payload/${propertyFile.getName()}.ts`,
           );
           this.addFile(files, propertyFile);
         }
@@ -287,7 +291,7 @@ export class SwaggerFileGenerator {
     }
     this.addFile(files, payloadFile);
 
-    const response = payload.operation.responses["200"] as
+    const response = payload.operation.responses['200'] as
       | ResponseObject
       | ReferenceObject
       | any;
@@ -304,7 +308,7 @@ export class SwaggerFileGenerator {
       const resultTypeName = resultFile.getName();
       if (resultTypeName != undefined) {
         resultFile.setPath(
-          `${this._prefixDirectory}/Result/${resultTypeName}.ts`
+          `${this._prefixDirectory}/Result/${resultTypeName}.ts`,
         );
         this.addFile(files, resultFile);
       }
@@ -332,11 +336,11 @@ export class SwaggerFileGenerator {
   private async buildApiMethodAsync() {}
 
   private async buildAxiosMethodAsync(
-    payload: BuildAxiosMethodPayload
+    payload: BuildAxiosMethodPayload,
   ): Promise<BuildAxiosMethodResult> {
     const files: TypescriptFile[] = [];
 
-    const response = payload.operation.responses["200"] as
+    const response = payload.operation.responses['200'] as
       | ResponseObject
       | ReferenceObject
       | any;
@@ -353,7 +357,7 @@ export class SwaggerFileGenerator {
       const resultTypeName = resultFile.getName();
       if (resultTypeName != undefined) {
         resultFile.setPath(
-          `${this._prefixDirectory}/Result/${resultTypeName}.ts`
+          `${this._prefixDirectory}/Result/${resultTypeName}.ts`,
         );
         this.addFile(files, resultFile);
       }
@@ -365,11 +369,6 @@ export class SwaggerFileGenerator {
       path: `../../IManager/${payload.tag}/Payload/${payload.tag}Payload`,
       type: ImportType.NamedImport,
     });
-    payload.file.addImport({
-      name: "axios",
-      path: "axios",
-      type: ImportType.DefaultImport,
-    });
     payload.file.addMethod({
       name: `${operationId}Async`,
       returnType: `Promise<${responseType.type}>`,
@@ -377,9 +376,8 @@ export class SwaggerFileGenerator {
         payload: `${payload.tag}Payload`,
       },
       sourceCode:
-        "const instance = axios.create({});\n" +
-        `\t\tconst response = await instance.${payload.method}<${responseType.type}>("${payload.path}");\n` +
-        "\t\treturn response.data;",
+        `const response = await this._instance.${payload.method}<${responseType.type}>("${payload.path}");\n` +
+        '\t\treturn response.data;',
     });
 
     return {
@@ -405,7 +403,7 @@ export class SwaggerFileGenerator {
   }
 
   private parseParameterObjectOrReferenceObject(
-    payload: ParseParameterObjectOrReferenceObjectPayload
+    payload: ParseParameterObjectOrReferenceObjectPayload,
   ): ParseParameterObjectOrReferenceObjectResult {
     if (isReferenceObject(payload.object)) {
       const referenceObject = payload.object;
@@ -425,7 +423,7 @@ export class SwaggerFileGenerator {
           files: [],
           targetFile: payload.targetFile,
           object: schemaObject,
-          importPrefix: "./",
+          importPrefix: './',
         });
         return {
           name: parameterObject.name,
@@ -437,15 +435,15 @@ export class SwaggerFileGenerator {
     }
 
     return {
-      name: "",
-      type: "void",
+      name: '',
+      type: 'void',
       required: true,
       files: [],
     };
   }
 
   private parseResponseObjectOrReferenceObject(
-    payload: ParseResponseObjectOrReferenceObjectPayload
+    payload: ParseResponseObjectOrReferenceObjectPayload,
   ): ParseResponseObjectOrReferenceObjectResult {
     const files: TypescriptFile[] = [];
 
@@ -457,26 +455,29 @@ export class SwaggerFileGenerator {
       const responseObject = payload.object;
       const contentObject = responseObject.content;
       if (contentObject != undefined) {
-        const responseSchema = contentObject["application/json"].schema;
-        if (responseSchema != undefined) {
-          const result = this.parseReferenceObjectOrSchemaObject({
-            tag: payload.tag,
-            files: files,
-            object: responseSchema,
-            targetFile: payload.targetFile,
-            importPrefix: "../../Result/",
-          });
-          return {
-            files: files,
-            type: result.typeName,
-          };
+        const jsonSchema = contentObject['application/json'];
+        if (jsonSchema != undefined) {
+          const responseSchema = jsonSchema.schema;
+          if (responseSchema != undefined) {
+            const result = this.parseReferenceObjectOrSchemaObject({
+              tag: payload.tag,
+              files: files,
+              object: responseSchema,
+              targetFile: payload.targetFile,
+              importPrefix: '../../Result/',
+            });
+            return {
+              files: files,
+              type: result.typeName,
+            };
+          }
         }
       }
     }
 
     return {
       files: files,
-      type: "void",
+      type: 'void',
     };
   }
 
@@ -486,11 +487,11 @@ export class SwaggerFileGenerator {
   > = {};
 
   private parseReferenceObjectOrSchemaObject(
-    payload: ParseReferenceObjectOrSchemaObjectPayload
+    payload: ParseReferenceObjectOrSchemaObjectPayload,
   ): ParseReferenceObjectOrSchemaObjectResult {
     const files: TypescriptFile[] = payload.files;
     if (payload.importPrefix == undefined) {
-      payload.importPrefix = "./";
+      payload.importPrefix = './';
     }
     if (isReferenceObject(payload.object)) {
       const referenceObject = payload.object;
@@ -526,7 +527,7 @@ export class SwaggerFileGenerator {
               });
             }
             const newTargetFile = new TypescriptFile(
-              TypescriptFileType.Interface
+              TypescriptFileType.Interface,
             ).setName(referenceName);
             files.push(newTargetFile);
             const reuslt = this.parseReferenceObjectOrSchemaObject({
@@ -561,7 +562,7 @@ export class SwaggerFileGenerator {
           const genericTypeObject = genericTypeObjects[1];
           if (isSchemaObject(genericTypeObject)) {
             const objectType = genericTypeObject.type;
-            if (objectType == "object") {
+            if (objectType == 'object') {
               const properties = genericTypeObject.properties;
               if (properties != undefined) {
                 const propertieKeys = Object.keys(properties);
@@ -577,10 +578,10 @@ export class SwaggerFileGenerator {
                     importPrefix: payload.importPrefix,
                   });
                   if (type.typeFile != undefined) {
-                    type.typeFile.addGenericType("T");
+                    type.typeFile.addGenericType('T');
                     type.typeFile.addField({
                       name: propertieKey,
-                      type: "T",
+                      type: 'T',
                       required: true,
                     });
                   }
@@ -594,17 +595,17 @@ export class SwaggerFileGenerator {
             }
           }
         }
-        console.log("unhandle GenericTypeObject");
+        console.log('unhandle GenericTypeObject');
       } else {
         const type = schemaObject.type;
         switch (type) {
-          case "string":
+          case 'string':
             const enums = schemaObject.enum;
             if (enums != undefined) {
               const fieldName = payload.fieldName;
               if (fieldName != undefined) {
                 const enumClassName = `${payload.tag}${upperCaseFirstLetter(
-                  fieldName
+                  fieldName,
                 )}`;
                 const enumClass = new TypescriptFile(TypescriptFileType.Enum);
                 enumClass.setName(enumClassName);
@@ -636,14 +637,14 @@ export class SwaggerFileGenerator {
               };
             }
             break;
-          case "number":
-          case "boolean":
+          case 'number':
+          case 'boolean':
             return {
               files: files,
               typeImportName: type,
               typeName: type,
             };
-          case "object":
+          case 'object':
             const objectFile = payload.targetFile;
             if (objectFile != undefined) {
               const properties = schemaObject.properties;
@@ -682,10 +683,10 @@ export class SwaggerFileGenerator {
               }
             } else {
               console.log(schemaObject);
-              console.log("targetfile is missing");
+              console.log('targetfile is missing');
             }
             break;
-          case "array":
+          case 'array':
             const arrayItems = schemaObject.items;
             if (arrayItems != undefined) {
               const arrayItemType = this.parseReferenceObjectOrSchemaObject({
@@ -709,8 +710,8 @@ export class SwaggerFileGenerator {
 
     return {
       files: files,
-      typeImportName: "void",
-      typeName: "void",
+      typeImportName: 'void',
+      typeName: 'void',
     };
   }
 }

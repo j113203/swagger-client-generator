@@ -1,17 +1,17 @@
-import { FileMethod } from "./Result/FileMethod";
-import { TypescriptFileType } from "./TypescriptFileType";
-import { FileField } from "./Result/FileField";
-import { FileEnum } from "./Result/FileEnum";
+import { FileMethod } from './Result/FileMethod';
+import { TypescriptFileType } from './TypescriptFileType';
+import { FileField } from './Result/FileField';
+import { FileEnum } from './Result/FileEnum';
 import * as path from 'path';
-import * as fs from "fs";
-import { AddMethodPayload } from "./Payload/AddMethodPayload";
-import { AddAbstractMethodPayload } from "./Payload/AddAbstractMethodPayload";
-import { AddImportPayload } from "./Payload/AddImportPayload";
-import { FileImport } from "./Result/FileImport";
-import { ImportType } from "./Payload/ImportType";
-import { AddFieldPayload } from "./Payload/AddFieldPayload";
-import { AddConstructorPayload } from "./Payload/AddConstructorPayload";
-import { FileConstructor } from "./Result/FileConstructor";
+import * as fs from 'fs';
+import { AddMethodPayload } from './Payload/AddMethodPayload';
+import { AddAbstractMethodPayload } from './Payload/AddAbstractMethodPayload';
+import { AddImportPayload } from './Payload/AddImportPayload';
+import { FileImport } from './Result/FileImport';
+import { ImportType } from './Payload/ImportType';
+import { AddFieldPayload } from './Payload/AddFieldPayload';
+import { AddConstructorPayload } from './Payload/AddConstructorPayload';
+import { FileConstructor } from './Result/FileConstructor';
 
 export default class TypescriptFile {
   constructor(type: TypescriptFileType) {
@@ -73,8 +73,8 @@ export default class TypescriptFile {
           payload.name,
           payload.type,
           payload.required,
-          payload.privateField ?? false
-        )
+          payload.privateField ?? false,
+        ),
       );
     }
     return this;
@@ -90,10 +90,15 @@ export default class TypescriptFile {
         },
       ];
     } else {
-      item.push({
-        name: payload.name,
-        type: payload.type,
-      });
+      const exist = item.some(
+        (x) => x.name == payload.name && x.type == payload.type,
+      );
+      if (!exist) {
+        item.push({
+          name: payload.name,
+          type: payload.type,
+        });
+      }
     }
     return this;
   }
@@ -168,42 +173,45 @@ export default class TypescriptFile {
               result += `import `;
 
               const allDefaultImport = item.every(
-                (x) => x.type == ImportType.DefaultImport
+                (x) => x.type == ImportType.DefaultImport,
               );
               if (allDefaultImport) {
                 result += `${item
                   .map((x) => {
                     return `${x.name}`;
                   })
-                  .join(", ")}`;
+                  .join(', ')}`;
               }
 
               const allNamedImport = item.every(
-                (x) => x.type == ImportType.NamedImport
+                (x) => x.type == ImportType.NamedImport,
               );
               if (allNamedImport) {
                 result += `{ ${item
                   .map((x) => {
                     return `${x.name}`;
                   })
-                  .join(", ")} }`;
+                  .join(', ')} }`;
               }
 
               if (!allDefaultImport && !allNamedImport) {
                 const allDefaultImportItem = item.filter(
-                  (x) => x.type == ImportType.DefaultImport
+                  (x) => x.type == ImportType.DefaultImport,
                 );
                 result += `${allDefaultImportItem
                   .map((x) => {
                     return `${x.name}`;
                   })
-                  .join(", ")}`;
+                  .join(', ')}`;
 
                 const allNamedImportItem = item.filter(
-                  (x) => x.type == ImportType.NamedImport
+                  (x) => x.type == ImportType.NamedImport,
                 );
 
-                if (allDefaultImportItem.length > 0 && allNamedImportItem.length > 0) {
+                if (
+                  allDefaultImportItem.length > 0 &&
+                  allNamedImportItem.length > 0
+                ) {
                   result += ` , `;
                 }
 
@@ -211,7 +219,7 @@ export default class TypescriptFile {
                   .map((x) => {
                     return `${x.name}`;
                   })
-                  .join(", ")} }`;
+                  .join(', ')} }`;
               }
 
               result += ` from "${key}";\n`;
@@ -220,13 +228,13 @@ export default class TypescriptFile {
             if (this._genericTypes.length > 0) {
               result += `export ${this._type} ${name}<${this._genericTypes
                 .map((x) => x)
-                .join(",")}>`;
+                .join(',')}>`;
             } else {
               result += `export ${this._type} ${name}`;
             }
 
             if (this._implements.length > 0) {
-              result += ` implements ${this._implements.join(",")}{\n`;
+              result += ` implements ${this._implements.join(',')}{\n`;
             } else {
               result += ` {\n`;
             }
@@ -235,9 +243,9 @@ export default class TypescriptFile {
               for (const field of this._fields) {
                 result += `\t`;
                 if (field.privateField) {
-                  result += "private ";
+                  result += 'private ';
                 }
-                result += `${field.name}${field.required ? "" : "?"}: ${
+                result += `${field.name}${field.required ? '' : '?'}: ${
                   field.type
                 };\n`;
               }
@@ -248,7 +256,7 @@ export default class TypescriptFile {
               result += `\tconstructor(`;
               result += Object.keys(constructor.parameters)
                 .map((key) => `${key}: ${constructor.parameters[key]}`)
-                .join(", ");
+                .join(', ');
               result += `) {\n`;
               result += `\t\t${constructor.sourceCode}\n`;
               result += `\t}\n`;
@@ -257,14 +265,14 @@ export default class TypescriptFile {
             for (const method of this._methods) {
               result += `\t`;
               if (method.abstract) {
-                result += "abstract ";
+                result += 'abstract ';
               } else {
                 if (method.getter) {
                   result += `get `;
                 }
                 if (
-                  method.returnType.startsWith("Promise<") &&
-                  method.returnType.endsWith(">")
+                  method.returnType.startsWith('Promise<') &&
+                  method.returnType.endsWith('>')
                 ) {
                   result += `async `;
                 }
@@ -272,7 +280,7 @@ export default class TypescriptFile {
               result += `${method.name}(`;
               result += Object.keys(method.parameters)
                 .map((key) => `${key}: ${method.parameters[key]}`)
-                .join(", ");
+                .join(', ');
               result += `): ${method.returnType}`;
 
               if (method.abstract) {
@@ -295,7 +303,7 @@ export default class TypescriptFile {
               result += `\t ${enumValue.name} = "${enumValue.value}",\n`;
             }
 
-            result += "}";
+            result += '}';
           }
           break;
         case TypescriptFileType.Index:
@@ -305,25 +313,25 @@ export default class TypescriptFile {
             result += `export `;
 
             const allDefaultImport = item.every(
-              (x) => x.type == ImportType.DefaultImport
+              (x) => x.type == ImportType.DefaultImport,
             );
             if (allDefaultImport) {
               result += `${item
                 .map((x) => {
                   return `${x.name}`;
                 })
-                .join(", ")}`;
+                .join(', ')}`;
             }
 
             const allNamedImport = item.every(
-              (x) => x.type == ImportType.NamedImport
+              (x) => x.type == ImportType.NamedImport,
             );
             if (allNamedImport) {
               result += `{ ${item
                 .map((x) => {
                   return `${x.name}`;
                 })
-                .join(", ")} }`;
+                .join(', ')} }`;
             }
 
             result += ` from "${key}";\n`;

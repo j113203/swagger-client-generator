@@ -1,6 +1,6 @@
 {
-  "name": "swagger-client-generator",
-  "version": "20240520.0.1",
+  "name": "@wajunworks/swagger-client",
+  "version": "20240521.0.1",
   "description": "TS Swagger client generator",
   "author": "jack.wong@atg.ai <jack.wong@atg.ai>",
   "license": "Apache-2.0",
@@ -22,6 +22,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",
-    "test": "npx ts-node -O '{\"module\":\"commonjs\"}' test/Startup.ts"
+    "test": "npx ts-node -O '{\"module\":\"commonjs\"}' test/Startup.ts",
+    "publish": "pnpm build && npm publish --access public"
   }
 }
