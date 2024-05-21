@@ -6,6 +6,7 @@ import { SwaggerFileGenerator } from './SwaggerFileGenerator';
 export class SwaggerGenerator {
   private _openApiSpecificationUrl?: string;
   private _name?: string;
+  private _outputDirectory: string = 'api';
 
   setOpenApiSpecificationUrl(url: string): SwaggerGenerator {
     this._openApiSpecificationUrl = url;
@@ -14,6 +15,11 @@ export class SwaggerGenerator {
 
   setName(name: string): SwaggerGenerator {
     this._name = name;
+    return this;
+  }
+
+  setOutputDirectory(directory: string): SwaggerGenerator {
+    this._outputDirectory = directory;
     return this;
   }
 
@@ -33,7 +39,7 @@ export class SwaggerGenerator {
       switch (openApiObject.openapi) {
         case '3.0.0':
         case '3.0.1':
-          const tagDirectory = `api/${name}`;
+          const tagDirectory = `${this._outputDirectory}/${name}`;
           if (fs.existsSync(tagDirectory)) {
             await fs.promises.rm(tagDirectory, { recursive: true });
           }

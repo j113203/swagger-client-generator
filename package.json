@@ -1,8 +1,12 @@
 {
   "name": "@wajunworks/swagger-client",
-  "version": "20240521.0.2",
+  "version": "20240521.0.5",
   "description": "TS Swagger client generator",
   "author": "jack.wong@atg.ai <jack.wong@atg.ai>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/j113203/swagger-client-generator.git"
+  },
   "license": "Apache-2.0",
   "type": "commonjs",
   "main": "dist/index.js",

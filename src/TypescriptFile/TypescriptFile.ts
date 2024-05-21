@@ -137,7 +137,9 @@ export default class TypescriptFile {
   }
 
   addGenericType(type: string): TypescriptFile {
-    this._genericTypes.push(type);
+    if (!this._genericTypes.includes(type)) {
+      this._genericTypes.push(type);
+    }
     return this;
   }
 
