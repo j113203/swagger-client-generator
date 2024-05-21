@@ -11,7 +11,7 @@ create a file generate.ts
       const resourceHub = new SwaggerGenerator();
       await resourceHub
         .setOpenApiSpecificationUrl(
-          "https://petstore.swagger.io/v2/swagger.json"
+          "https://generator3.swagger.io/openapi.json"
         )
         .setName("PetStoreMobileV2Api")
         .buildAsync();

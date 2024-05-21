@@ -1,6 +1,6 @@
 {
   "name": "@wajunworks/swagger-client",
-  "version": "20240521.0.1",
+  "version": "20240521.0.2",
   "description": "TS Swagger client generator",
   "author": "jack.wong@atg.ai <jack.wong@atg.ai>",
   "license": "Apache-2.0",
