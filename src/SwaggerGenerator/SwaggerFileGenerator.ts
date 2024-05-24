@@ -135,6 +135,7 @@ export class SwaggerFileGenerator {
     ).setPath(`${this._prefixDirectory}/Manager/index.ts`);
 
     for (const tag of Object.keys(tags)) {
+      const tagName = getTagName(tag);
       const imanagerFile = new TypescriptFile(TypescriptFileType.AbstractClass)
         .setPath(
           `${this._prefixDirectory}/IManager/${tagName}/I${tagName}Manager.ts`,
