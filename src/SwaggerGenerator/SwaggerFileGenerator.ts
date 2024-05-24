@@ -14,6 +14,7 @@ import { ParseParameterObjectOrReferenceObjectPayload } from './Payload/ParsePar
 import { ParseParameterObjectOrReferenceObjectResult } from './Result/ParseParameterObjectOrReferenceObjectResult';
 import {
   getOperationId,
+  getTagName,
   lowerCaseFirstLetter,
   upperCaseFirstLetter,
 } from './OpenAPIObjectExtension';
@@ -135,19 +136,23 @@ export class SwaggerFileGenerator {
 
     for (const tag of Object.keys(tags)) {
       const imanagerFile = new TypescriptFile(TypescriptFileType.AbstractClass)
-        .setPath(`${this._prefixDirectory}/IManager/${tag}/I${tag}Manager.ts`)
-        .setName(`I${tag}Manager`);
+        .setPath(
+          `${this._prefixDirectory}/IManager/${tagName}/I${tagName}Manager.ts`,
+        )
+        .setName(`I${tagName}Manager`);
       imanagerIndexFile.addExport({
-        name: `I${tag}Manager`,
-        path: `./${tag}/I${tag}Manager`,
+        name: `I${tagName}Manager`,
+        path: `./${tagName}/I${tagName}Manager`,
         type: ImportType.NamedImport,
       });
       const managerFile = new TypescriptFile(TypescriptFileType.Class)
-        .setPath(`${this._prefixDirectory}/Manager/${tag}/${tag}Manager.ts`)
-        .addImplement(`I${tag}Manager`)
+        .setPath(
+          `${this._prefixDirectory}/Manager/${tagName}/${tagName}Manager.ts`,
+        )
+        .addImplement(`I${tagName}Manager`)
         .addImport({
-          name: `I${tag}Manager`,
-          path: `../../IManager/${tag}/I${tag}Manager`,
+          name: `I${tagName}Manager`,
+          path: `../../IManager/${tagName}/I${tagName}Manager`,
           type: ImportType.NamedImport,
         })
         .addField({
@@ -167,10 +172,10 @@ export class SwaggerFileGenerator {
           },
           sourceCode: 'this._instance = instance',
         })
-        .setName(`${tag}Manager`);
+        .setName(`${tagName}Manager`);
       managerIndexFile.addExport({
-        name: `${tag}Manager`,
-        path: `./${tag}/${tag}Manager`,
+        name: `${tagName}Manager`,
+        path: `./${tagName}/${tagName}Manager`,
         type: ImportType.NamedImport,
       });
 
@@ -194,19 +199,19 @@ export class SwaggerFileGenerator {
       }
 
       apiFile.addMethod({
-        name: `${lowerCaseFirstLetter(tag)}`,
-        returnType: `I${tag}Manager`,
+        name: `${lowerCaseFirstLetter(tagName)}`,
+        returnType: `I${tagName}Manager`,
         parameters: {},
-        sourceCode: `return new ${tag}Manager(this._instance);`,
+        sourceCode: `return new ${tagName}Manager(this._instance);`,
         getter: true,
       });
       apiFile.addImport({
-        name: `I${tag}Manager`,
+        name: `I${tagName}Manager`,
         path: './IManager',
         type: ImportType.NamedImport,
       });
       apiFile.addImport({
-        name: `${tag}Manager`,
+        name: `${tagName}Manager`,
         path: './Manager',
         type: ImportType.NamedImport,
       });
@@ -261,11 +266,13 @@ export class SwaggerFileGenerator {
   ): Promise<BuildAbstractMethodResult> {
     const files: TypescriptFile[] = [];
 
+    const tagName = getTagName(payload.tag);
+
     const parameters = payload.operation.parameters;
     const payloadFile = new TypescriptFile(TypescriptFileType.Interface);
-    payloadFile.setName(`${payload.tag}Payload`);
+    payloadFile.setName(`${tagName}Payload`);
     payloadFile.setPath(
-      `${this._prefixDirectory}/IManager/${payload.tag}/Payload/${payload.tag}Payload.ts`,
+      `${this._prefixDirectory}/IManager/${tagName}/Payload/${tagName}Payload.ts`,
     );
     if (parameters != undefined) {
       for (const parameter of parameters) {
@@ -282,9 +289,9 @@ export class SwaggerFileGenerator {
         for (let i = 0; i < property.files.length; i++) {
           const propertyFile = property.files[i];
           propertyFile.setPath(
-            `${this._prefixDirectory}/IManager/${
-              payload.tag
-            }/Payload/${propertyFile.getName()}.ts`,
+            `${
+              this._prefixDirectory
+            }/IManager/${tagName}/Payload/${propertyFile.getName()}.ts`,
           );
           this.addFile(files, propertyFile);
         }
@@ -317,15 +324,15 @@ export class SwaggerFileGenerator {
 
     const operationId = getOperationId(payload.operation.operationId);
     payload.file.addImport({
-      name: `${payload.tag}Payload`,
-      path: `./Payload/${payload.tag}Payload`,
+      name: `${tagName}Payload`,
+      path: `./Payload/${tagName}Payload`,
       type: ImportType.NamedImport,
     });
     payload.file.addAbstractMethod({
       name: `${operationId}Async`,
       returnType: `Promise<${responseType.type}>`,
       parameters: {
-        payload: `${payload.tag}Payload`,
+        payload: `${tagName}Payload`,
       },
     });
 
@@ -334,12 +341,11 @@ export class SwaggerFileGenerator {
     };
   }
 
-  private async buildApiMethodAsync() {}
-
   private async buildAxiosMethodAsync(
     payload: BuildAxiosMethodPayload,
   ): Promise<BuildAxiosMethodResult> {
     const files: TypescriptFile[] = [];
+    const tagName = getTagName(payload.tag);
 
     const response = payload.operation.responses['200'] as
       | ResponseObject
@@ -366,8 +372,8 @@ export class SwaggerFileGenerator {
 
     const operationId = getOperationId(payload.operation.operationId);
     payload.file.addImport({
-      name: `${payload.tag}Payload`,
-      path: `../../IManager/${payload.tag}/Payload/${payload.tag}Payload`,
+      name: `${tagName}Payload`,
+      path: `../../IManager/${tagName}/Payload/${tagName}Payload`,
       type: ImportType.NamedImport,
     });
 
@@ -375,7 +381,7 @@ export class SwaggerFileGenerator {
 
     const parameter = payload.operation.parameters;
     if (parameter != undefined && parameter.length > 0) {
-      sourceCode += '\n\t\t\tparams:{\n';
+      sourceCode += '\n\t\t\tparams : {\n';
       const axiosParams = this.buildAxiosParams({
         parameters: parameter,
       });
@@ -384,7 +390,7 @@ export class SwaggerFileGenerator {
         sourceCode += `\t\t\t\t${key} : ${value},\n`;
       }
       sourceCode += `\t\t\t}\n`;
-    }else{
+    } else {
       sourceCode += `\n`;
     }
 
@@ -394,7 +400,7 @@ export class SwaggerFileGenerator {
       name: `${operationId}Async`,
       returnType: `Promise<${responseType.type}>`,
       parameters: {
-        payload: `${payload.tag}Payload`,
+        payload: `${tagName}Payload`,
       },
       sourceCode: sourceCode,
     });

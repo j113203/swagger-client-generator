@@ -27,3 +27,8 @@ export function getOperationId(operationId: string | undefined): string {
   }
   return '';
 }
+
+export function getTagName(tagName: string): string {
+  tagName = tagName.split(' ').join('').split('-').join('_');
+  return tagName;
+}
