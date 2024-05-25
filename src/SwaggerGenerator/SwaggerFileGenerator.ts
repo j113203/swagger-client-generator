@@ -28,6 +28,7 @@ import { ImportType } from '../TypescriptFile/Payload/ImportType';
 import { SwaggerOperationResult } from './Result/SwaggerOperationResult';
 import { CacheReferenceObjectResult } from './Result/CacheReferenceObjectResult';
 import { BuildAxiosParamsPayload } from './Payload/BuildAxiosParamsPayload';
+import { BuildAxiosParamsResult } from './Result/BuildAxiosParamsResult';
 
 export class SwaggerFileGenerator {
   private readonly _name: string;
@@ -269,11 +270,12 @@ export class SwaggerFileGenerator {
 
     const tagName = getTagName(payload.tag);
 
+    const operationId = getOperationId(payload.operation.operationId);
     const parameters = payload.operation.parameters;
     const payloadFile = new TypescriptFile(TypescriptFileType.Interface);
-    payloadFile.setName(`${tagName}Payload`);
+    payloadFile.setName(`${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload`);
     payloadFile.setPath(
-      `${this._prefixDirectory}/IManager/${tagName}/Payload/${tagName}Payload.ts`,
+      `${this._prefixDirectory}/IManager/${tagName}/Payload/${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload.ts`,
     );
     if (parameters != undefined) {
       for (const parameter of parameters) {
@@ -323,17 +325,16 @@ export class SwaggerFileGenerator {
       }
     }
 
-    const operationId = getOperationId(payload.operation.operationId);
     payload.file.addImport({
-      name: `${tagName}Payload`,
-      path: `./Payload/${tagName}Payload`,
+      name: `${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload`,
+      path: `./Payload/${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload`,
       type: ImportType.NamedImport,
     });
     payload.file.addAbstractMethod({
       name: `${operationId}Async`,
       returnType: `Promise<${responseType.type}>`,
       parameters: {
-        payload: `${tagName}Payload`,
+        payload: `${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload`,
       },
     });
 
@@ -373,35 +374,42 @@ export class SwaggerFileGenerator {
 
     const operationId = getOperationId(payload.operation.operationId);
     payload.file.addImport({
-      name: `${tagName}Payload`,
-      path: `../../IManager/${tagName}/Payload/${tagName}Payload`,
+      name: `${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload`,
+      path: `../../IManager/${tagName}/Payload/${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload`,
       type: ImportType.NamedImport,
     });
 
-    let sourceCode = `const response = await this._instance.${payload.method}<${responseType.type}>("${payload.path}", {`;
-
+    let axiosParams: BuildAxiosParamsResult = {
+      path: {},
+      params: {},
+    };
     const parameter = payload.operation.parameters;
     if (parameter != undefined && parameter.length > 0) {
-      sourceCode += '\n\t\t\tparams : {\n';
-      const axiosParams = this.buildAxiosParams({
+      axiosParams = this.buildAxiosParams({
         parameters: parameter,
       });
-      for (const key in axiosParams) {
-        const value = axiosParams[key];
-        sourceCode += `\t\t\t\t${key} : ${value},\n`;
-      }
-      sourceCode += `\t\t\t}\n`;
-    } else {
-      sourceCode += `\n`;
     }
 
+    let path = payload.path;
+    for(const key in axiosParams.path){
+      path = path.replace(`{${key}}`, `\${${axiosParams.path[key]}}`);
+    }
+
+    let sourceCode = `const response = await this._instance.${payload.method}<${responseType.type}>(\`${path}\`, {`;
+
+    sourceCode += '\n\t\t\tparams : {\n';
+    for (const key in axiosParams.params) {
+      const value = axiosParams.params[key];
+      sourceCode += `\t\t\t\t${key} : ${value},\n`;
+    }
+    sourceCode += `\t\t\t}\n`;
     sourceCode += `\t\t});\n` + '\t\treturn response.data;';
 
     payload.file.addMethod({
       name: `${operationId}Async`,
       returnType: `Promise<${responseType.type}>`,
       parameters: {
-        payload: `${tagName}Payload`,
+        payload: `${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload`,
       },
       sourceCode: sourceCode,
     });
@@ -413,13 +421,22 @@ export class SwaggerFileGenerator {
 
   private buildAxiosParams(
     payload: BuildAxiosParamsPayload,
-  ): Record<string, string> {
-    const reuslt: Record<string, string> = {};
+  ): BuildAxiosParamsResult {
+    const reuslt: BuildAxiosParamsResult = {
+      path: {},
+      params: {},
+    };
     for (const parameter of payload.parameters) {
       if (isReferenceObject(parameter)) {
         console.log('ReferenceObject');
       } else {
-        reuslt[parameter.name] = `payload.${parameter.name}`;
+        if (parameter.in == 'query') {
+          reuslt.params[parameter.name] = `payload.${parameter.name}`;
+        } else if (parameter.in == 'path') {
+          reuslt.path[parameter.name] = `payload.${parameter.name}`;
+        } else {
+          console.log(parameter.in);
+        }
       }
     }
     return reuslt;
