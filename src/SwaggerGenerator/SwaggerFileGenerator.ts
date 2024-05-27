@@ -13,8 +13,10 @@ import { ParseReferenceObjectOrSchemaObjectResult } from './Result/ParseReferenc
 import { ParseParameterObjectOrReferenceObjectPayload } from './Payload/ParseParameterObjectOrReferenceObjectPayload';
 import { ParseParameterObjectOrReferenceObjectResult } from './Result/ParseParameterObjectOrReferenceObjectResult';
 import {
+  getClassNameByOperationId,
+  getPathByTag,
   getOperationId,
-  getTagName,
+  getPathByOperationId,
   lowerCaseFirstLetter,
   upperCaseFirstLetter,
 } from './OpenAPIObjectExtension';
@@ -29,6 +31,11 @@ import { SwaggerOperationResult } from './Result/SwaggerOperationResult';
 import { CacheReferenceObjectResult } from './Result/CacheReferenceObjectResult';
 import { BuildAxiosParamsPayload } from './Payload/BuildAxiosParamsPayload';
 import { BuildAxiosParamsResult } from './Result/BuildAxiosParamsResult';
+import { CreateIManagerFilePayload } from './Payload/CreateIManagerFilePayload';
+import { CreateManagerFilePayload } from './Payload/CreateManagerFilePayload';
+import { CreateIndexFilePayload } from './Payload/CreateIndexFilePayload';
+import { CreateClientFilePayload } from './Payload/CreateClientFilePayload';
+import { CreateAbstractClientFilePayload } from './Payload/CreateAbstractClientFilePayload';
 
 export class SwaggerFileGenerator {
   private readonly _name: string;
@@ -136,90 +143,32 @@ export class SwaggerFileGenerator {
     ).setPath(`${this._prefixDirectory}/Manager/index.ts`);
 
     for (const tag of Object.keys(tags)) {
-      const tagName = getTagName(tag);
-      const imanagerFile = new TypescriptFile(TypescriptFileType.AbstractClass)
-        .setPath(
-          `${this._prefixDirectory}/IManager/${tagName}/I${tagName}Manager.ts`,
-        )
-        .setName(`I${tagName}Manager`);
-      imanagerIndexFile.addExport({
-        name: `I${tagName}Manager`,
-        path: `./${tagName}/I${tagName}Manager`,
-        type: ImportType.NamedImport,
-      });
-      const managerFile = new TypescriptFile(TypescriptFileType.Class)
-        .setPath(
-          `${this._prefixDirectory}/Manager/${tagName}/${tagName}Manager.ts`,
-        )
-        .addImplement(`I${tagName}Manager`)
-        .addImport({
-          name: `I${tagName}Manager`,
-          path: `../../IManager/${tagName}/I${tagName}Manager`,
-          type: ImportType.NamedImport,
-        })
-        .addField({
-          name: '_instance',
-          type: 'AxiosInstance',
-          required: true,
-          privateField: true,
-        })
-        .addImport({
-          name: 'AxiosInstance',
-          path: 'axios',
-          type: ImportType.NamedImport,
-        })
-        .addConstructor({
-          parameters: {
-            instance: 'AxiosInstance',
-          },
-          sourceCode: 'this._instance = instance',
-        })
-        .setName(`${tagName}Manager`);
-      managerIndexFile.addExport({
-        name: `${tagName}Manager`,
-        path: `./${tagName}/${tagName}Manager`,
-        type: ImportType.NamedImport,
-      });
-
       const operations = tags[tag];
 
       for (const operation of operations) {
         const abstractMethod = await this.buildAbstractMethodAsync({
-          file: imanagerFile,
           tag: tag,
           operation: operation.object,
+          indexFile: imanagerIndexFile,
         });
         this.addFiles(files, abstractMethod.files);
         const axiosMethod = await this.buildAxiosMethodAsync({
-          file: managerFile,
           tag: tag,
           operation: operation.object,
           path: operation.path,
           method: operation.method,
+          apiFile: apiFile,
+          indexFile: managerIndexFile,
         });
         this.addFiles(files, axiosMethod.files);
       }
+    }
 
-      apiFile.addMethod({
-        name: `${lowerCaseFirstLetter(tagName)}`,
-        returnType: `I${tagName}Manager`,
-        parameters: {},
-        sourceCode: `return new ${tagName}Manager(this._instance);`,
-        getter: true,
-      });
-      apiFile.addImport({
-        name: `I${tagName}Manager`,
-        path: './IManager',
-        type: ImportType.NamedImport,
-      });
-      apiFile.addImport({
-        name: `${tagName}Manager`,
-        path: './Manager',
-        type: ImportType.NamedImport,
-      });
-
-      this.addFile(files, imanagerFile);
-      this.addFile(files, managerFile);
+    for (const indexFile of Object.values(this._indexFiles)) {
+      this.addFile(files, indexFile);
+    }
+    for (const clientFile of Object.values(this._clientFiles)) {
+      this.addFile(files, clientFile);
     }
 
     this.addFile(files, imanagerIndexFile);
@@ -268,14 +217,41 @@ export class SwaggerFileGenerator {
   ): Promise<BuildAbstractMethodResult> {
     const files: TypescriptFile[] = [];
 
-    const tagName = getTagName(payload.tag);
+    const tagPathName = getPathByTag(payload.tag);
+    const operationPathName = getPathByOperationId(
+      payload.operation.operationId,
+    );
+    const operationClassName = getClassNameByOperationId(
+      payload.operation.operationId,
+    );
+
+    const imanagerFile = this.createIManagerFile({
+      tagPathName: tagPathName,
+      operationPathName: operationPathName,
+      name: operationClassName,
+    });
+    files.push(imanagerFile);
+
+    payload.indexFile.addExport({
+      name: `*`,
+      path: `./${tagPathName}`,
+      type: ImportType.DefaultImport,
+    });
 
     const operationId = getOperationId(payload.operation.operationId);
     const parameters = payload.operation.parameters;
     const payloadFile = new TypescriptFile(TypescriptFileType.Interface);
-    payloadFile.setName(`${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload`);
+    payloadFile.setName(
+      `${operationClassName}${upperCaseFirstLetter(
+        getOperationId(operationId),
+      )}Payload`,
+    );
     payloadFile.setPath(
-      `${this._prefixDirectory}/IManager/${tagName}/Payload/${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload.ts`,
+      `${
+        this._prefixDirectory
+      }/IManager/${tagPathName}/${operationPathName}/Payload/${operationClassName}${upperCaseFirstLetter(
+        getOperationId(operationId),
+      )}Payload.ts`,
     );
     if (parameters != undefined) {
       for (const parameter of parameters) {
@@ -294,7 +270,7 @@ export class SwaggerFileGenerator {
           propertyFile.setPath(
             `${
               this._prefixDirectory
-            }/IManager/${tagName}/Payload/${propertyFile.getName()}.ts`,
+            }/IManager/${operationPathName}/Payload/${propertyFile.getName()}.ts`,
           );
           this.addFile(files, propertyFile);
         }
@@ -310,7 +286,7 @@ export class SwaggerFileGenerator {
     const responseType = this.parseResponseObjectOrReferenceObject({
       tag: payload.tag,
       object: response,
-      targetFile: payload.file,
+      targetFile: imanagerFile,
     });
 
     const responseFiles = responseType.files;
@@ -325,16 +301,22 @@ export class SwaggerFileGenerator {
       }
     }
 
-    payload.file.addImport({
-      name: `${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload`,
-      path: `./Payload/${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload`,
+    imanagerFile.addImport({
+      name: `${operationClassName}${upperCaseFirstLetter(
+        getOperationId(operationId),
+      )}Payload`,
+      path: `./Payload/${operationClassName}${upperCaseFirstLetter(
+        getOperationId(operationId),
+      )}Payload`,
       type: ImportType.NamedImport,
     });
-    payload.file.addAbstractMethod({
+    imanagerFile.addAbstractMethod({
       name: `${operationId}Async`,
       returnType: `Promise<${responseType.type}>`,
       parameters: {
-        payload: `${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload`,
+        payload: `${operationClassName}${upperCaseFirstLetter(
+          getOperationId(operationId),
+        )}Payload`,
       },
     });
 
@@ -347,7 +329,44 @@ export class SwaggerFileGenerator {
     payload: BuildAxiosMethodPayload,
   ): Promise<BuildAxiosMethodResult> {
     const files: TypescriptFile[] = [];
-    const tagName = getTagName(payload.tag);
+
+    const tagPathName = getPathByTag(payload.tag);
+    const operationPathName = getPathByOperationId(
+      payload.operation.operationId,
+    );
+    const operationClassName = getClassNameByOperationId(
+      payload.operation.operationId,
+    );
+    const managerFile = this.createManagerFile({
+      tagPathName: tagPathName,
+      operationPathName: operationPathName,
+      name: operationClassName,
+    });
+
+    payload.indexFile.addExport({
+      name: `*`,
+      path: `./${tagPathName}`,
+      type: ImportType.DefaultImport,
+    });
+    payload.apiFile.addMethod({
+      name: `${lowerCaseFirstLetter(tagPathName)}`,
+      returnType: `I${tagPathName}Client`,
+      parameters: {},
+      sourceCode: `return new ${tagPathName}Client(this._instance);`,
+      getter: true,
+    });
+    payload.apiFile.addImport({
+      name: `I${tagPathName}Client`,
+      path: './index',
+      type: ImportType.NamedImport,
+    });
+    payload.apiFile.addImport({
+      name: `${tagPathName}Client`,
+      path: './index',
+      type: ImportType.NamedImport,
+    });
+
+    files.push(managerFile);
 
     const response = payload.operation.responses['200'] as
       | ResponseObject
@@ -357,7 +376,7 @@ export class SwaggerFileGenerator {
     const responseType = this.parseResponseObjectOrReferenceObject({
       tag: payload.tag,
       object: response,
-      targetFile: payload.file,
+      targetFile: managerFile,
     });
 
     const responseFiles = responseType.files;
@@ -373,9 +392,13 @@ export class SwaggerFileGenerator {
     }
 
     const operationId = getOperationId(payload.operation.operationId);
-    payload.file.addImport({
-      name: `${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload`,
-      path: `../../IManager/${tagName}/Payload/${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload`,
+    managerFile.addImport({
+      name: `${operationClassName}${upperCaseFirstLetter(
+        getOperationId(operationId),
+      )}Payload`,
+      path: `../../../IManager/${tagPathName}/${operationPathName}/Payload/${operationClassName}${upperCaseFirstLetter(
+        getOperationId(operationId),
+      )}Payload`,
       type: ImportType.NamedImport,
     });
 
@@ -391,7 +414,7 @@ export class SwaggerFileGenerator {
     }
 
     let path = payload.path;
-    for(const key in axiosParams.path){
+    for (const key in axiosParams.path) {
       path = path.replace(`{${key}}`, `\${${axiosParams.path[key]}}`);
     }
 
@@ -405,11 +428,13 @@ export class SwaggerFileGenerator {
     sourceCode += `\t\t\t}\n`;
     sourceCode += `\t\t});\n` + '\t\treturn response.data;';
 
-    payload.file.addMethod({
+    managerFile.addMethod({
       name: `${operationId}Async`,
       returnType: `Promise<${responseType.type}>`,
       parameters: {
-        payload: `${tagName}${upperCaseFirstLetter(getOperationId(operationId))}Payload`,
+        payload: `${operationClassName}${upperCaseFirstLetter(
+          getOperationId(operationId),
+        )}Payload`,
       },
       sourceCode: sourceCode,
     });
@@ -521,7 +546,7 @@ export class SwaggerFileGenerator {
               files: files,
               object: responseSchema,
               targetFile: payload.targetFile,
-              importPrefix: '../../Result/',
+              importPrefix: '../../../Result/',
             });
             return {
               files: files,
@@ -770,5 +795,200 @@ export class SwaggerFileGenerator {
       typeImportName: 'void',
       typeName: 'void',
     };
+  }
+
+  private _indexFiles: Record<string, TypescriptFile> = {};
+
+  private createIndexFile(payload: CreateIndexFilePayload): TypescriptFile {
+    const path = `${this._prefixDirectory}/${payload.type}/${payload.tagPathName}/index.ts`;
+    const result = this._indexFiles[path];
+    if (result == undefined) {
+      const indexFile = new TypescriptFile(TypescriptFileType.Index).setPath(
+        path,
+      );
+      this._indexFiles[path] = indexFile;
+      return indexFile;
+    }
+    return result;
+  }
+
+  private _clientFiles: Record<string, TypescriptFile> = {};
+
+  private createAbstractClientFile(
+    payload: CreateAbstractClientFilePayload,
+  ): TypescriptFile {
+    const path = `${this._prefixDirectory}/IManager/${payload.tagPathName}/I${payload.tagPathName}Client.ts`;
+    const result = this._clientFiles[path];
+    if (result == undefined) {
+      const clientFile = new TypescriptFile(TypescriptFileType.AbstractClass)
+        .setName(`I${payload.tagPathName}Client`)
+        .setPath(path)
+
+      payload.indexFile.addExport({
+        name: `I${payload.tagPathName}Client`,
+        path: `./I${payload.tagPathName}Client.ts`,
+        type: ImportType.NamedImport,
+      });
+
+      this._clientFiles[path] = clientFile;
+      return clientFile;
+    }
+    return result;
+  }
+
+  private createClientFile(payload: CreateClientFilePayload): TypescriptFile {
+    const path = `${this._prefixDirectory}/Manager/${payload.tagPathName}/${payload.tagPathName}Client.ts`;
+    const result = this._clientFiles[path];
+    if (result == undefined) {
+      const clientFile = new TypescriptFile(TypescriptFileType.Class)
+        .setName(`${payload.tagPathName}Client`)
+        .setPath(path)
+        .addField({
+          name: '_instance',
+          type: 'AxiosInstance',
+          required: true,
+          privateField: true,
+        })
+        .addImport({
+          name: 'AxiosInstance',
+          path: 'axios',
+          type: ImportType.NamedImport,
+        })
+        .addConstructor({
+          parameters: {
+            instance: 'AxiosInstance',
+          },
+          sourceCode: 'this._instance = instance',
+        });
+
+      payload.indexFile.addExport({
+        name: `${payload.tagPathName}Client`,
+        path: `./${payload.tagPathName}Client.ts`,
+        type: ImportType.NamedImport,
+      });
+
+      this._clientFiles[path] = clientFile;
+      return clientFile;
+    }
+    return result;
+  }
+
+  private _imanagerFiles: Record<string, TypescriptFile> = {};
+
+  private createIManagerFile(
+    payload: CreateIManagerFilePayload,
+  ): TypescriptFile {
+    const path = `${this._prefixDirectory}/IManager/${payload.tagPathName}/${payload.operationPathName}/I${payload.name}Manager.ts`;
+    let result = this._imanagerFiles[path];
+
+    const indexFile = this.createIndexFile({
+      type: 'IManager',
+      tagPathName: payload.tagPathName,
+    });
+
+    if (result == undefined) {
+      const imanagerFile = new TypescriptFile(TypescriptFileType.AbstractClass)
+        .setPath(path)
+        .setName(`I${payload.name}Manager`);
+      this._imanagerFiles[path] = imanagerFile;
+
+      indexFile.addExport({
+        name: `I${payload.name}Manager`,
+        path: `./${payload.operationPathName}/I${payload.name}Manager.ts`,
+        type: ImportType.NamedImport,
+      });
+
+      result = imanagerFile;
+    }
+
+    const clientFile = this.createAbstractClientFile({
+      tagPathName: payload.tagPathName,
+      indexFile: indexFile,
+    });
+    clientFile.addAbstractMethod({
+      name: `${lowerCaseFirstLetter(payload.name)}`,
+      returnType: `I${payload.name}Manager`,
+      parameters: {},
+      getter: true,
+    });
+    clientFile.addImport({
+      name: `I${payload.name}Manager`,
+      path: `../../index`,
+      type: ImportType.NamedImport,
+    });
+
+    return result;
+  }
+
+  private _managerFiles: Record<string, TypescriptFile> = {};
+  private createManagerFile(payload: CreateManagerFilePayload): TypescriptFile {
+    const path = `${this._prefixDirectory}/Manager/${payload.tagPathName}/${payload.operationPathName}/${payload.name}Manager.ts`;
+    let result = this._managerFiles[path];
+
+    const indexFile = this.createIndexFile({
+      type: 'Manager',
+      tagPathName: payload.tagPathName,
+    });
+
+    if (result == undefined) {
+      const managerFile = new TypescriptFile(TypescriptFileType.Class)
+        .setPath(path)
+        .addImplement(`I${payload.name}Manager`)
+        .addImport({
+          name: `I${payload.name}Manager`,
+          path: `../../../IManager/${payload.tagPathName}/${payload.operationPathName}/I${payload.name}Manager`,
+          type: ImportType.NamedImport,
+        })
+        .addField({
+          name: '_instance',
+          type: 'AxiosInstance',
+          required: true,
+          privateField: true,
+        })
+        .addImport({
+          name: 'AxiosInstance',
+          path: 'axios',
+          type: ImportType.NamedImport,
+        })
+        .addConstructor({
+          parameters: {
+            instance: 'AxiosInstance',
+          },
+          sourceCode: 'this._instance = instance',
+        })
+        .setName(`${payload.name}Manager`);
+      this._managerFiles[path] = managerFile;
+      result = managerFile;
+
+      indexFile.addExport({
+        name: `${payload.name}Manager`,
+        path: `./${payload.operationPathName}/${payload.name}Manager.ts`,
+        type: ImportType.NamedImport,
+      });
+    }
+
+    const clientFile = this.createClientFile({
+      tagPathName: payload.tagPathName,
+      indexFile: indexFile,
+    });
+    clientFile.addMethod({
+      name: `${lowerCaseFirstLetter(payload.name)}`,
+      returnType: `I${payload.name}Manager`,
+      parameters: {},
+      sourceCode: `return new ${payload.name}Manager(this._instance);`,
+      getter: true,
+    });
+    clientFile.addImport({
+      name: `I${payload.name}Manager`,
+      path: `../../index`,
+      type: ImportType.NamedImport,
+    });
+    clientFile.addImport({
+      name: `${payload.name}Manager`,
+      path: `../../index`,
+      type: ImportType.NamedImport,
+    });
+
+    return result;
   }
 }

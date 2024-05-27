@@ -39,25 +39,31 @@ export default class TypescriptFile {
   }
 
   addAbstractMethod(payload: AddAbstractMethodPayload): TypescriptFile {
-    this._methods.push({
-      name: payload.name,
-      returnType: payload.returnType,
-      parameters: payload.parameters,
-      abstract: true,
-      getter: false,
-    });
+    const exist = this._methods.find((x) => x.name == payload.name);
+    if (exist == undefined) {
+      this._methods.push({
+        name: payload.name,
+        returnType: payload.returnType,
+        parameters: payload.parameters,
+        abstract: true,
+        getter: payload.getter ?? false,
+      });
+    }
     return this;
   }
 
   addMethod(payload: AddMethodPayload): TypescriptFile {
-    this._methods.push({
-      name: payload.name,
-      returnType: payload.returnType,
-      parameters: payload.parameters,
-      sourceCode: payload.sourceCode,
-      abstract: false,
-      getter: payload.getter ?? false,
-    });
+    const exist = this._methods.find((x) => x.name == payload.name);
+    if (exist == undefined) {
+      this._methods.push({
+        name: payload.name,
+        returnType: payload.returnType,
+        parameters: payload.parameters,
+        sourceCode: payload.sourceCode,
+        abstract: false,
+        getter: payload.getter ?? false,
+      });
+    }
     return this;
   }
 
@@ -113,10 +119,15 @@ export default class TypescriptFile {
         },
       ];
     } else {
-      item.push({
-        name: payload.name,
-        type: payload.type,
-      });
+      const exist = item.some(
+        (x) => x.name == payload.name && x.type == payload.type,
+      );
+      if (!exist) {
+        item.push({
+          name: payload.name,
+          type: payload.type,
+        });
+      }
     }
     return this;
   }
@@ -268,6 +279,11 @@ export default class TypescriptFile {
               result += `\t`;
               if (method.abstract) {
                 result += 'abstract ';
+
+                if (method.getter) {
+                  result += `get `;
+                }
+                
               } else {
                 if (method.getter) {
                   result += `get `;

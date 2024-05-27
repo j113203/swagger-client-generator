@@ -1,3 +1,4 @@
+import { IoTHubMobileApiClient } from '../api/IoTHubMobileApi';
 import { SwaggerGenerator } from '../src/index';
 
 (async () => {
@@ -22,4 +23,7 @@ import { SwaggerGenerator } from '../src/index';
     )
     .setName('IoTHubMobileApi')
     .buildAsync();
+
+
+    //new IoTHubMobileApiClient().healthRecord.bloodGlucoseRecord.listAsync({});
 })();
