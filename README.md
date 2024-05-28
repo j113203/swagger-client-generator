@@ -82,16 +82,24 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+In modern software development, integrating and maintaining consistent communication between backend services and frontend/mobile applications is crucial. To streamline this process, our project introduces an innovative solution: an automated SDK generator designed specifically for backend teams. This tool leverages the power of Swagger (OpenAPI) specifications to generate NPM packages that serve as SDKs. These SDKs facilitate seamless integration for frontend and mobile teams, promoting efficiency and reducing manual coding efforts.
 
-There are many great README templates available on GitHub; however, I didn't find one that really suited my needs so I created this enhanced one. I want to create a README template so amazing that it'll be the last one you ever need -- I think this is it.
+#### Key Features
+##### Automated SDK Generation:
+The core functionality of our project is to automatically generate a Node.js SDK during the CI/CD pipeline.
+By utilizing Swagger JSON specifications, the generator creates clean, lightweight, and maintainable code.
 
-Here's why:
-* Your time should be focused on creating something amazing. A project that solves a problem and helps others
-* You shouldn't be doing the same tasks over and over like creating a README from scratch
-* You should implement DRY principles to the rest of your life :smile:
+##### CI/CD Integration:
+The generator integrates seamlessly with CI/CD pipelines, ensuring that SDKs are up-to-date with the latest API changes.
+This automation reduces the need for manual intervention and ensures consistency across development environments.
 
-Of course, no one template will serve all projects since your needs may be different. So I'll be adding more in the near future. You may also suggest changes by forking this repo and creating a pull request or opening an issue. Thanks to all the people have contributed to expanding this template!
+##### Multi-Platform Support:
+The generated SDK is designed to be versatile, supporting usage in both frontend and mobile development environments.
+It is compatible with any project that uses Node.js, making it a robust solution for various development teams.
+
+##### Clean and Lightweight Code:
+The SDK generator emphasizes producing clean, readable, and efficient code.
+This focus ensures that the SDK is easy to integrate, extend, and maintain.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -253,7 +261,7 @@ Use this space to list resources you find helpful and would like to give credit 
 [license-shield]: https://img.shields.io/github/license/j113203/swagger-client-generator.svg?style=for-the-badge
 [license-url]: https://github.com/j113203/swagger-client-generator/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/othneildrew
+[linkedin-url]: https://www.linkedin.com/in/ka-wa-wong-029706171/
 [product-screenshot]: images/screenshot.png
 [Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
 [Next-url]: https://nextjs.org/
