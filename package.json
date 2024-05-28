@@ -1,6 +1,6 @@
 {
   "name": "@wajunworks/swagger-client",
-  "version": "20240525.0.1",
+  "version": "20240527.0.1",
   "description": "TS Swagger client generator",
   "author": "jack.wong@atg.ai <jack.wong@atg.ai>",
   "repository": {
