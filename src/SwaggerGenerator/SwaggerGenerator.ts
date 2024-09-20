@@ -2,6 +2,7 @@ import axios from 'axios';
 import * as fs from 'fs';
 import { OpenAPIObject } from 'openapi3-ts/oas30';
 import { SwaggerFileGenerator } from './SwaggerFileGenerator';
+import * as https from 'https';
 
 export class SwaggerGenerator {
   private _openApiSpecificationUrl?: string;
@@ -31,7 +32,13 @@ export class SwaggerGenerator {
     } else if (name == undefined) {
       console.log('name is not set');
     } else {
-      const instance = axios.create();
+      const httpsAgent = new https.Agent({
+        rejectUnauthorized: false,
+      });
+      const instance = axios.create({
+        httpsAgent: httpsAgent,
+      });
+
       const response = await instance.get<OpenAPIObject>(url);
 
       const openApiObject = response.data;

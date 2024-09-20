@@ -36,6 +36,8 @@ import { CreateManagerFilePayload } from './Payload/CreateManagerFilePayload';
 import { CreateIndexFilePayload } from './Payload/CreateIndexFilePayload';
 import { CreateClientFilePayload } from './Payload/CreateClientFilePayload';
 import { CreateAbstractClientFilePayload } from './Payload/CreateAbstractClientFilePayload';
+import { ParseRequestBodyObjectOrReferenceObjectPayload } from './Payload/ParseRequestBodyObjectOrReferenceObjectPayload';
+import { ParseRequestBodyObjectOrReferenceObjectResult } from './Result/ParseRequestBodyObjectOrReferenceObjectResult';
 
 export class SwaggerFileGenerator {
   private readonly _name: string;
@@ -239,7 +241,6 @@ export class SwaggerFileGenerator {
     });
 
     const operationId = getOperationId(payload.operation.operationId);
-    const parameters = payload.operation.parameters;
     const payloadFile = new TypescriptFile(TypescriptFileType.Interface);
     payloadFile.setName(
       `${operationClassName}${upperCaseFirstLetter(
@@ -253,14 +254,44 @@ export class SwaggerFileGenerator {
         getOperationId(operationId),
       )}Payload.ts`,
     );
+    payloadFile.addField({
+      name: 'where',
+      type: `${operationClassName}${upperCaseFirstLetter(
+        getOperationId(operationId),
+      )}WherePayload`,
+      required: true,
+    });
+    payloadFile.addImport({
+      name: `${operationClassName}${upperCaseFirstLetter(
+        getOperationId(operationId),
+      )}WherePayload`,
+      path: `./${operationClassName}${upperCaseFirstLetter(
+        getOperationId(operationId),
+      )}WherePayload`,
+      type: ImportType.NamedImport,
+    });
+    const payloadWhereFile = new TypescriptFile(TypescriptFileType.Interface);
+    payloadWhereFile.setName(
+      `${operationClassName}${upperCaseFirstLetter(
+        getOperationId(operationId),
+      )}WherePayload`,
+    );
+    payloadWhereFile.setPath(
+      `${
+        this._prefixDirectory
+      }/IManager/${tagPathName}/${operationPathName}/Payload/${operationClassName}${upperCaseFirstLetter(
+        getOperationId(operationId),
+      )}WherePayload.ts`,
+    );
+    const parameters = payload.operation.parameters;
     if (parameters != undefined) {
       for (const parameter of parameters) {
         const property = this.parseParameterObjectOrReferenceObject({
           tag: payload.tag,
           object: parameter,
-          targetFile: payloadFile,
+          targetFile: payloadWhereFile,
         });
-        payloadFile.addField({
+        payloadWhereFile.addField({
           name: property.name,
           type: property.type,
           required: property.required,
@@ -270,13 +301,43 @@ export class SwaggerFileGenerator {
           propertyFile.setPath(
             `${
               this._prefixDirectory
-            }/IManager/${operationPathName}/Payload/${propertyFile.getName()}.ts`,
+            }/IManager/${tagPathName}/${operationPathName}/Payload/${propertyFile.getName()}.ts`,
           );
+          // console.log(
+          //   `${this._prefixDirectory}/IManager/${tagPathName}/${operationPathName}/Payload/${propertyFile.getName()}.ts`,
+          // );
           this.addFile(files, propertyFile);
         }
       }
     }
+    const requestBody = payload.operation.requestBody;
+    if (requestBody != undefined) {
+      const dataType = this.parseRequestBodyObjectOrReferenceObject({
+        tag: payload.tag,
+        object: requestBody,
+        targetFile: payloadFile,
+      });
+      payloadFile.addField({
+        name: 'data',
+        type: dataType.type,
+        required: true,
+      });
+      const dataFiles = dataType.files;
+      for (let i = 0; i < dataFiles.length; i++) {
+        const dtoFile = dataFiles[i];
+        const dtoTypeName = dtoFile.getName();
+        if (dtoTypeName != undefined) {
+          dtoFile.setPath(
+            `${this._prefixDirectory}/IManager/${tagPathName}/${operationPathName}/Payload/${dtoTypeName}.ts`,
+          );
+          this.addFile(files, dtoFile);
+        }
+      }
+    }
+
     this.addFile(files, payloadFile);
+    this.addFile(files, payloadWhereFile);
+    //this.addFile(files, payloadDataFile);
 
     const response = payload.operation.responses['200'] as
       | ResponseObject
@@ -412,20 +473,41 @@ export class SwaggerFileGenerator {
         parameters: parameter,
       });
     }
+    const requestBody = payload.operation.requestBody;
 
     let path = payload.path;
     for (const key in axiosParams.path) {
       path = path.replace(`{${key}}`, `\${${axiosParams.path[key]}}`);
     }
 
-    let sourceCode = `const response = await this._instance.${payload.method}<${responseType.type}>(\`${path}\`, {`;
+    let sourceCode = `const response = await this._instance.${payload.method}<${responseType.type}>(\`${path}\`, `;
 
-    sourceCode += '\n\t\t\tparams : {\n';
-    for (const key in axiosParams.params) {
-      const value = axiosParams.params[key];
-      sourceCode += `\t\t\t\t${key} : ${value},\n`;
+    if (payload.method === 'get' || payload.method === 'delete') {
+      sourceCode += '{\n\t\t\tparams : {\n';
+      for (const key in axiosParams.params) {
+        const value = axiosParams.params[key];
+        sourceCode += `\t\t\t\t${key} : ${value},\n`;
+      }
+      sourceCode += `\t\t\t},\n`;
+
+      if (requestBody != undefined) {
+        sourceCode += '\t\t\tdata : payload.data,\n';
+      }
+    } else {
+      if (requestBody != undefined) {
+        sourceCode += '\n\t\t\tpayload.data,\n';
+      } else {
+        sourceCode += '\n\t\t\tnull,\n';
+      }
+      sourceCode += '\t\t\t{';
+      sourceCode += '\n\t\t\t\tparams : {\n';
+      for (const key in axiosParams.params) {
+        const value = axiosParams.params[key];
+        sourceCode += `\t\t\t\t${key} : ${value},\n`;
+      }
+      sourceCode += `\t\t\t},\n`;
     }
-    sourceCode += `\t\t\t}\n`;
+
     sourceCode += `\t\t});\n` + '\t\treturn response.data;';
 
     managerFile.addMethod({
@@ -456,9 +538,9 @@ export class SwaggerFileGenerator {
         console.log('ReferenceObject');
       } else {
         if (parameter.in == 'query') {
-          reuslt.params[parameter.name] = `payload.${parameter.name}`;
+          reuslt.params[parameter.name] = `payload.where.${parameter.name}`;
         } else if (parameter.in == 'path') {
-          reuslt.path[parameter.name] = `payload.${parameter.name}`;
+          reuslt.path[parameter.name] = `payload.where.${parameter.name}`;
         } else {
           console.log(parameter.in);
         }
@@ -521,6 +603,50 @@ export class SwaggerFileGenerator {
       type: 'void',
       required: true,
       files: [],
+    };
+  }
+
+  private parseRequestBodyObjectOrReferenceObject(
+    payload: ParseRequestBodyObjectOrReferenceObjectPayload,
+  ): ParseRequestBodyObjectOrReferenceObjectResult {
+    const files: TypescriptFile[] = [];
+
+    if (isReferenceObject(payload.object)) {
+      const referenceObject = payload.object;
+      const referenceName = referenceObject.$ref.slice(21);
+      console.log(`Reference To ${referenceName}`);
+    } else {
+      const responseObject = payload.object;
+      let required = false;
+      if (responseObject.required != undefined) {
+        required = responseObject.required;
+      }
+      const contentObject = responseObject.content;
+      if (contentObject != undefined) {
+        const jsonSchema = contentObject['application/json'];
+        if (jsonSchema != undefined) {
+          const schemaObject = jsonSchema.schema;
+          if (schemaObject != undefined) {
+            const result = this.parseReferenceObjectOrSchemaObject({
+              tag: payload.tag,
+              fieldName: 'data',
+              files: files,
+              targetFile: payload.targetFile,
+              object: schemaObject,
+              importPrefix: './',
+            });
+            return {
+              files: result.files,
+              type: result.typeName,
+            };
+          }
+        }
+      }
+    }
+
+    return {
+      files: files,
+      type: 'void',
     };
   }
 
@@ -730,6 +856,7 @@ export class SwaggerFileGenerator {
             const objectFile = payload.targetFile;
             if (objectFile != undefined) {
               const properties = schemaObject.properties;
+              const additionalProperties = schemaObject.additionalProperties;
               if (properties != undefined) {
                 const requiredList = schemaObject.required;
                 const propertieKeys = Object.keys(properties);
@@ -747,12 +874,34 @@ export class SwaggerFileGenerator {
                   if (requiredList != undefined) {
                     isRequired = requiredList.includes(propertieKey);
                   }
+                  // console.log('propertieKey', propertieKey);
+                  // console.log('field', field.typeName);
                   objectFile.addField({
                     name: propertieKey,
                     type: field.typeName,
                     required: isRequired,
                   });
                 }
+              } else if (additionalProperties != undefined) {
+                if (typeof additionalProperties != 'boolean') {
+                  const additionalPropertiesType =
+                    this.parseReferenceObjectOrSchemaObject({
+                      tag: payload.tag,
+                      fieldName: '',
+                      files: files,
+                      object: additionalProperties,
+                    });
+                  return {
+                    files: files,
+                    typeImportName: `Record<string, ${additionalPropertiesType.typeName}>`,
+                    typeName: `Record<string, ${additionalPropertiesType.typeName}>`,
+                  };
+                }
+                return {
+                  files: files,
+                  typeImportName: 'Record<string, string>',
+                  typeName: 'Record<string, string>',
+                };
               }
               const fileName = objectFile.getName();
               if (fileName != undefined) {
@@ -822,7 +971,7 @@ export class SwaggerFileGenerator {
     if (result == undefined) {
       const clientFile = new TypescriptFile(TypescriptFileType.AbstractClass)
         .setName(`I${payload.tagPathName}Client`)
-        .setPath(path)
+        .setPath(path);
 
       payload.indexFile.addExport({
         name: `I${payload.tagPathName}Client`,
