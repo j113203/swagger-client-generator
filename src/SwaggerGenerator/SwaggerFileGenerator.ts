@@ -335,6 +335,17 @@ export class SwaggerFileGenerator {
       }
     }
 
+    payloadFile.addImport({
+      name: 'CancelTokenSource',
+      path: 'axios',
+      type: ImportType.NamedImport,
+    });
+    payloadFile.addField({
+      name: 'cancelToken',
+      type: 'CancelTokenSource',
+      required: false,
+    });
+
     this.addFile(files, payloadFile);
     this.addFile(files, payloadWhereFile);
     //this.addFile(files, payloadDataFile);
@@ -508,6 +519,7 @@ export class SwaggerFileGenerator {
       sourceCode += `\t\t\t},\n`;
     }
 
+    sourceCode += `\t\t\tcancelToken : payload.cancelToken != undefined ? payload.cancelToken.token : undefined\n`;
     sourceCode += `\t\t});\n` + '\t\treturn response.data;';
 
     managerFile.addMethod({
@@ -790,7 +802,10 @@ export class SwaggerFileGenerator {
                     type.typeFile.addField({
                       name: propertieKey,
                       type: 'T',
-                      required: true,
+                      required:
+                        genericTypeObject.nullable != undefined
+                          ? !genericTypeObject.nullable
+                          : true,
                     });
                   }
                   return {
@@ -803,7 +818,7 @@ export class SwaggerFileGenerator {
             }
           }
         }
-        console.log('unhandle GenericTypeObject');
+        console.log('unhandle GenericTypeObject', genericTypeObjects);
       } else {
         const type = schemaObject.type;
         switch (type) {
@@ -838,6 +853,16 @@ export class SwaggerFileGenerator {
                 };
               }
             } else {
+              if (schemaObject.format!=undefined) {
+                switch (schemaObject.format) {
+                  case 'date-time':
+                    return {
+                      files: files,
+                      typeImportName: "Date",
+                      typeName: "Date",
+                    };
+                }
+              }
               return {
                 files: files,
                 typeImportName: type,

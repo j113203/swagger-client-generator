@@ -1,6 +1,6 @@
 {
   "name": "@wajunworks/swagger-client",
-  "version": "20240919.0.1",
+  "version": "20250114.0.2",
   "description": "TS Swagger client generator",
   "author": "jack.wong@atg.ai <jack.wong@atg.ai>",
   "repository": {
@@ -16,13 +16,17 @@
   "files": [
     "dist"
   ],
+  "bin": {
+    "api": "dist/tools/api/index.js"
+  },
   "dependencies": {
-    "axios": "^1.7.7",
+    "axios": "^1.7.9",
+    "commander": "^13.0.0",
     "openapi3-ts": "^4.4.0"
   },
   "devDependencies": {
-    "@types/node": "^20.16.5",
-    "typescript": "^5.6.2"
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.2"
   },
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",
